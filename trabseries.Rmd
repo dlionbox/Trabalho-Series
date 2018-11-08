@@ -1,0 +1,150 @@
+---
+title: "Trabalho PrÃ¡tico - ME607"
+author: "Aline Dias Nunes, Ana Alice Scalet, Diogo Henrique Dias, Gabriel Bueno Bottignon"
+date: "05 de novembro de 2018"
+output:
+  html_document: default
+  geometry: margin=1in
+  fontsize: 11pt
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Introdução
+
+Neste relatório são feitas análises de duas séries temporais, com o propósito de prever dados futuros de ambas. Para entendimento geral, uma série temporal é uma sequência de observações feitas em espaços de tempo (frequência) iguais. Abaixo são definidas os dados a serem estudados posteriormente:
+
+1. Monthly New York City average temperature: degrees C. Jan 1946 – Dec 1959.
+  - Dados mensais da temperatura média (em ºC) para a cidade de Nova Iorque, durante o período de Janeiro de 1946 a Dezembro de 1959.
+  
+2. Ozon concentration, downtown L. A., 1955-1972.
+  - Dados mensais indicando a concentração de Ozônio no centro de Los Angeles, entre os anos de 1955 e 1972.
+
+Assim, inicialmente, uma análise descritiva é necessária para a descrição das características e medidas resumo dos dados, tais como possíveis mudanças de estrutura da série, presença ou não de tendência, sazonalidade e outliers. A partir dessa análise, é possível entender, modelar e finalmente prever próximos dados para as séries indicadas. 
+
+# Análise Descritiva
+
+## New York
+```{r,echo=FALSE}
+newyork<-read.csv("monthly-new-york-city-average-te.csv")
+newyork<-ts(newyork,start = 1946,frequency = 12)
+```
+```{r,echo=FALSE,fig.height=4,fig.width=8}
+#Gráfico da série.
+plot(newyork,ylab="Temperatura Média (ºC)",xlab="Ano",main="Temperaturas Médias Mensais - Nova Iorque")
+```
+Ao observarmos o gráfico da série, nota-se a significativa sazonalidade dos dados (comportamento parecido de acordo com os meses, de ano para ano), variância constante e nenhuma mudança estrutural aparente. Pelas medidas resumo abaixo, a temperatura média geral dentre todo o período é de 15.33ºC, sendo a média máxima de 20ºC (Julho de 1955) e a mínima de 10ºC (Janeiro de 1948).
+```{r,echo=FALSE}
+summary(newyork)
+```
+Abaixo dois gráficos são criados para estudar melhor as características da série. O primeiro foi feito a partir do agrupamento dos dados mensais em anuais. Assim, pode-se perceber indicações de tendência. O segundo, mostra boxplots para cada mês, para todos os anos, a fim de confirmarmos a sazonalidade nos dados.
+```{r,echo=FALSE,fig.height=4,fig.width=8}
+plot(aggregate(newyork)/12,ylab="Temperatura Média (ºC)",xlab="Ano",main="Temperaturas Médias Anuais - Nova Iorque") #Média dos anos
+boxplot(newyork~cycle(newyork),xlab="Mês",ylab="Temperatura Média (ºC)",main="Boxplot de Efeitos Sazonais - Nova Iorque") #boxplot dos meses
+```
+De acordo com os boxplots, é observado um valor atípico para o mês de Dezembro. Ao olhar os dados mais atentamente, encontramos este em Dezembro de 1946, com temperatura média de 17.8ºC. Porém, não consideramos este um outlier, já que os valores da série estão ao redor de 15ºC.
+
+O gráfico de Boxplots também mostra que há uma maior média de temperaturas nos meses 6 a 9 (Junho a Setembro), e temperaturas menores entre os meses 12 a 2 (Dezembro a Fevereiro), ou seja, há fortes indícios de sazonalidade anual nos dados da série. Como confirmação disso (além do gráfico 1), temos as informações climáticas da cidade de Nova Iorque¹. De acordo com as estações do ano, é verão nos meses de 6 a 8, outono entre 9 e 11, inverno entre 12 e 2 e primavera de 3 a 5.
+
+Pelo gráfico de Temperaturas Anuais, não podemos afirmar nada sobre tendência. As temperaturas sofrem crescimentos e diminuições ao longo dos anos (1946-1959), mantendo aparentemente o mesmo nível médio em toda a série. Para avaliar se há realmente tendência nos dados, testamos o modelo:
+```{r}
+n <- length(newyork) # Tamanho da série
+t <- seq(1:n)
+p <- n/12        # Número de períodos
+
+modelo <- lm(newyork~t)
+summary(modelo)
+```
+Como a componente t não é significativa para o modelo, concluímos que não existe tendência.
+```{r,warning=FALSE,message=FALSE}
+library(TSA)
+periodogram(newyork,log = "no",plot = TRUE)
+```
+
+## Ozone Time Series
+```{r,echo=FALSE,fig.height=4,fig.width=8}
+ozonio<-read.csv("ozon-concentration-downtown-l-a-.csv")
+ozonio<-ts(ozonio, start=1955,frequency = 12)
+plot(ozonio,ylab="Concentração",xlab="Ano",main="Concentração Mensal de Ozônio - Los Angeles")
+```
+Plotando o gráfico da série, já é possível perceber uma leve tendência decrescente, além de possível sazonalidade. Não observa-se pontos aberrantes, mudanças estruturais, além de possuir variância constante ao longo dos anos. Para termos mais certeza disso, mais análises são feitas.
+De acordo com o summary, os dados apresentam concentração mínima, dentre todos os anos, de 1,2 e máxima de 8,7. A concentração média de ozônio é de aproximadamente 3,8.
+```{r,echo=FALSE}
+summary(ozonio)
+```
+```{r,echo=FALSE,fig.height=4,fig.width=8}
+plot(aggregate(ozonio)/12,ylab="Concentração",xlab="Ano",main="Concentração Média Anual de Ozônio - Los Angeles") #Média dos anos
+boxplot(ozonio~cycle(ozonio),ylab="Concentração",xlab="Mês",main="Boxplots de Efeitos Sazonais - Los Angeles") #boxplot dos meses
+```
+Observando os dois gráficos acima, nota-se que há uma tendência decrescente desde o começo da série (1955), já que o nível médio não é o mesmo para todos os anos. A partir disso, há indícios de tendência decrescente significativa, porém não temos certeza sobre a presença ou não de sazonalidade. 
+Pela literatura, o ozônio tem maiores concentrações nos meses em que não há tanta nebulosidade (maior incidência de radiação solar e céu limpo)². Há outros fatores, mas para este caso da série, apenas os meses são suficientes para indicar que existe sazonalidade nos dados.
+```{r,echo=FALSE}
+periodogram(ozonio,log="no",plot=TRUE)
+```
+
+Baseado nas análises feitas, são ajustados modelos para as duas séries.
+
+# Modelagem
+
+## New York
+
+Conforme visto nas análises descritivas acima, um modelo candidato para os dados é aditivo, $Y{t}=\mu+S{t}+\epsilon{t}$, onde $Y{t}$ são as observações da série, $\mu$ a média dos dados, $S{t}$ as componentes sazonais e $\epsilon{t}$ uma sequência de perturbações.
+
+Como possuímos dados mensais, as componentes $S{t}$ podem ser especificadas por: 
+$S{t}=d{i}$, $t\in$ i-ésimo mês; $i=1,...,12$, onde $\sum_{i=1}^{n=12} d{i}=0$.
+
+Assim, a sazonalidade é denotada por $\sum_{i=1}^{n=12} (d{i}D{it})$. As variáveis $D{it}$ são dummies, ou seja, foram criadas como indicadoras iguais a 1, caso t pertença ao mês i, e 0 caso contrário.
+```{r,echo=FALSE}
+Q0 =  rep(c(rep(1, 12)), length(newyork)/12) 
+Q1 =  rep(c( 1, 0, 0, 0,0,0,0,0,0,0,0,0), length(newyork) / 12)
+Q2 =  rep(c( 0, 1, 0, 0,0,0,0,0,0,0,0,0), length(newyork) / 12)
+Q3 =  rep(c( 0, 0, 1, 0,0,0,0,0,0,0,0,0), length(newyork) / 12)
+Q4 =  rep(c( 0, 0, 0, 1,0,0,0,0,0,0,0,0), length(newyork) / 12)
+Q5 =  rep(c( 0, 0, 0, 0,1,0,0,0,0,0,0,0), length(newyork) / 12)
+Q6 =  rep(c( 0, 0, 0, 0,0,1,0,0,0,0,0,0), length(newyork) / 12)
+Q7 =  rep(c( 0, 0, 0, 0,0,0,1,0,0,0,0,0), length(newyork) / 12)
+Q8 =  rep(c( 0, 0, 0, 0,0,0,0,1,0,0,0,0), length(newyork) / 12)
+Q9 =  rep(c( 0, 0, 0, 0,0,0,0,0,1,0,0,0), length(newyork) / 12)
+Q10 = rep(c( 0, 0, 0, 0,0,0,0,0,0,1,0,0), length(newyork) / 12)
+Q11 = rep(c( 0, 0, 0, 0,0,0,0,0,0,0,1,0), length(newyork) / 12)
+Q12 = rep(c( 0, 0, 0, 0,0,0,0,0,0,0,0,1), length(newyork) / 12)
+
+d1 <- Q1-Q12              
+d2 <- Q2-Q12              
+d3 <- Q3-Q12
+d4 <- Q4-Q12
+d5 <- Q5-Q12
+d6 <- Q6-Q12
+d7 <- Q7-Q12
+d8 <- Q8-Q12
+d9 <- Q9-Q12
+d10 <- Q10-Q12
+d11 <- Q11-Q12
+```
+Dado isso, é proposto um modelo de regressão $Y=X\beta+\epsilon$ para estimação dos coeficientes $\beta=(\mu,d{i})'$. Para X ser inversível, $d{12}=-\sum_{i=1}^{n=11}d{i}$.
+A seguir, é mostrada a saída do ajuste do modelo indicado.
+```{r,echo=FALSE}
+modelo = lm(newyork~d1+d2+d3+d5+d6+d7+d8+d9+d10+d11)
+summary(modelo) ### Adjusted R-squared: # 0.9374
+```
+Há significância dos coeficientes $d{i}$ e $R^2$ ajustado possui um valor próximo de 1, o que mostra que a sugestão do modelo é boa. Em relação aos resíduos, busca-se média 0, variância constante $\sigma^2$, além de serem independentes e identicamente distribuídos. Analisando essas características, temos o gráfico abaixo e o teste de Box-Ljung.
+```{r}
+plot(modelo$residuals,ylab="Resíduo",xlab = "Observação")
+Box.test(modelo$residuals,type = "Ljung-Box",lag = 1)
+```
+Pela definição do teste, a hipótese nula indica que os resíduos são i.i.d. Como p-valor é igual a 0.0438, rejeita-se a hipótese nula. Assim, algum ajuste para os resíduos é necessário.
+```{r,fig.height=6,fig.width=8}
+fit2 = arima(x = modelo$residuals, order = c(1L,0L,1L))
+library(aTSA)
+ts.diag(fit2)
+tsdiag(fit2)
+```
+
+
+# Referências
+[1] https://www.nyc.com/visitor_guide/weather_facts.75835/
+
+[2] Rong Lu, Richard P. Turco, Ozone distributions over the los angeles basin: Three-dimensional simulations with the smog model, Atmospheric Environment, Volume 30, Issue 24, 1996, Pages 4155-4176, ISSN 1352-2310, https://doi.org/10.1016/1352-2310(96)00153-7. (http://www.sciencedirect.com/science/article/pii/1352231096001537)
